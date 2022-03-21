@@ -1,10 +1,11 @@
+import asyncio
 import multiprocessing
 import os
 import sys
 from concurrent.futures.thread import ThreadPoolExecutor
 from multiprocessing import Lock
 from multiprocessing import Value
-from time import time, sleep
+from time import time
 
 from loguru import logger
 
@@ -12,12 +13,12 @@ from logging_config import configure_logger
 from utilities import clear_log_directory
 
 
-def do_a_slow_thing(thing_number):
+async def do_a_slow_thing(thing_number):
     global slow_thing_duration
     global total_jobs
 
     logger.debug(f"\tstarting thing {thing_number} on process {os.getpid()}...")
-    sleep(slow_thing_duration)
+    await asyncio.sleep(slow_thing_duration)
     logger.info(f"\tfinished thing {thing_number} on process {os.getpid()}...")
 
     sys.stdout.write(f"\rcompleted {thing_number} -- "
@@ -47,7 +48,7 @@ def execute_slow_thing_based_on_counter():
                 is_do_slow_thing = True
 
         if is_do_slow_thing:
-            do_a_slow_thing(thing_number)
+            asyncio.run(do_a_slow_thing(thing_number))
         else:
             break
 
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     start: float = time()
 
     # do_slow_things_serially(counter.value)
-    do_slow_things_multithread()
-    # do_slow_things_multiprocess_multithread()
+    # do_slow_things_multithread()
+    do_slow_things_multiprocess_multithread()
 
     logger.success(f"processing took {time() - start} to complete")
