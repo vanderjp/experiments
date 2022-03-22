@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger
 
-from utilities import get_log_directory
+from file_system_utilities import get_log_directory
 
 
 def configure_logger():
