@@ -26,7 +26,7 @@ def format_duration_string(duration: float) -> str:
     duration_str: str = f"{seconds}s"
 
     if minutes > 0:
-        duration_str = f"{minutes}m" + duration_str
+        duration_str = f"{minutes}m " + duration_str
 
     return duration_str
 
@@ -43,17 +43,12 @@ def get_final_summary(start_time: float, total_jobs: int) -> str:
 def print_eta(job_count: int, start_time: time, total_jobs: int):
     duration: float = time() - start_time
 
-    eta_string = ""
     eta: float = (duration / job_count) * (total_jobs - job_count)
-
-    if eta > 60:
-        eta_string += str(round(eta / 60)) + "m "
-    eta_string += str(round(eta % 60)) + "s"
 
     format_duration_string(eta)
 
-    sys.stdout.write(f"\rTasks Completed: {job_count} -- "
+    sys.stdout.write(f"\rTasks Completed: {job_count}/{total_jobs} -- "
                      f"Percent Completion: {round((job_count / total_jobs) * 100)}% -- "
                      f"Duration: {format_duration_string(duration)} -- "
-                     f"Completion ETA: {eta_string}")
+                     f"Completion ETA: {format_duration_string(eta)}")
     sys.stdout.flush()
