@@ -11,17 +11,21 @@ from loguru import logger
 
 import logging_utilities
 
-# start_time: Optional[float] = None
+JOB_COUNTER: Optional[Value] = None
+JOB_COUNTER_LOCK: Optional[Lock] = None
+PROCESS_COUNT: Optional[int] = None
+SLOW_THING_DURATION: Optional[int] = None
+START_TIME: Optional[float] = None
+THREAD_COUNT: Optional[int] = None
+TOTAL_JOBS: Optional[int] = None
 
 
 async def do_a_slow_thing(thing_number):
-    global slow_thing_duration
-    global total_jobs
 
-    logging_utilities.print_eta(thing_number, start_time, total_jobs)
+    logging_utilities.print_eta(thing_number, START_TIME, TOTAL_JOBS)
 
     logger.debug(f"\tstarting thing {thing_number} on process {os.getpid()}...")
-    await asyncio.sleep(slow_thing_duration)
+    await asyncio.sleep(SLOW_THING_DURATION)
     logger.info(f"\tfinished thing {thing_number} on process {os.getpid()}...")
 
 
@@ -33,17 +37,13 @@ async def do_a_slow_thing(thing_number):
 
 
 def execute_slow_thing_based_on_counter():
-    global lock
-    global counter
-    global total_jobs
-
     while True:
         thing_number: int = -1
         is_do_slow_thing: bool = False
-        with lock:
-            if counter.value <= total_jobs:
-                thing_number = counter.value
-                counter.value += 1
+        with JOB_COUNTER_LOCK:
+            if JOB_COUNTER.value <= TOTAL_JOBS:
+                thing_number = JOB_COUNTER.value
+                JOB_COUNTER.value += 1
                 is_do_slow_thing = True
 
         if is_do_slow_thing:
@@ -53,70 +53,70 @@ def execute_slow_thing_based_on_counter():
 
 
 def do_slow_things_multithread():
-    global lock
-    global counter
-    global threadCount
-
     logging_utilities.configure_logger(is_delete_existing=False)
     logger.info("********** THREADED RESULTS **********")
 
-    with ThreadPoolExecutor(max_workers=threadCount) as pool:
-        for _ in range(threadCount):
+    with ThreadPoolExecutor(max_workers=THREAD_COUNT) as pool:
+        for _ in range(THREAD_COUNT):
             pool.submit(execute_slow_thing_based_on_counter)
 
 
-def processInit(aCounter, aLock, aThreadCount, a_slow_thing_duration, a_total_jobs, a_start_time):
-    global lock
-    global counter
-    global threadCount
-    global slow_thing_duration
-    global total_jobs
-    global start_time
+def processInit(a_counter,
+                a_counter_lock,
+                a_slow_thing_duration,
+                a_start_time,
+                a_thread_count,
+                a_total_jobs):
+    global JOB_COUNTER
+    global JOB_COUNTER_LOCK
+    global SLOW_THING_DURATION
+    global START_TIME
+    global THREAD_COUNT
+    global TOTAL_JOBS
 
-    lock = aLock
-    counter = aCounter
-    threadCount = aThreadCount
-    slow_thing_duration = a_slow_thing_duration
-    total_jobs = a_total_jobs
-    start_time = a_start_time
+    JOB_COUNTER = a_counter
+    JOB_COUNTER_LOCK = a_counter_lock
+    THREAD_COUNT = a_thread_count
+    SLOW_THING_DURATION = a_slow_thing_duration
+    TOTAL_JOBS = a_total_jobs
+    START_TIME = a_start_time
 
 
 def do_slow_things_multiprocess_multithread():
-    global lock
-    global counter
-    global threadCount
-    global processCount
-    global slow_thing_duration
-    global total_jobs
-    global start_time
+    global JOB_COUNTER_LOCK
+    global JOB_COUNTER
+    global THREAD_COUNT
+    global PROCESS_COUNT
+    global TOTAL_JOBS
 
     logger.info("********** MULTIPROCESS RESULTS **********")
 
     with multiprocessing.Pool(initializer=processInit,
-                              initargs=(counter, lock, threadCount, slow_thing_duration, total_jobs,
-                                        start_time)) as pool:
-        for _ in range(processCount):
+                              initargs=(JOB_COUNTER,
+                                        JOB_COUNTER_LOCK,
+                                        SLOW_THING_DURATION,
+                                        START_TIME,
+                                        THREAD_COUNT,
+                                        TOTAL_JOBS)) as pool:
+        for _ in range(PROCESS_COUNT):
             pool.apply_async(do_slow_things_multithread)
         pool.close()
         pool.join()
 
-    logger.success(f"processing took {time() - start_time} to complete")
-
 
 if __name__ == '__main__':
+    JOB_COUNTER = Value("i", 1)
+    JOB_COUNTER_LOCK = Lock()
+    PROCESS_COUNT = multiprocessing.cpu_count() - 1
+    SLOW_THING_DURATION = 3
+    START_TIME = time()
+    THREAD_COUNT = 10
+    TOTAL_JOBS = 500
+
     logging_utilities.configure_logger()
 
-    counter: Value = Value("i", 1)
-    lock: Lock() = Lock()
-    slow_thing_duration: int = 3
-    total_jobs: int = 500
-    threadCount: int = 10
-    processCount: int = multiprocessing.cpu_count() - 1
-
-    start_time = time()
-
-    # do_slow_things_serially(counter.value)
+    # do_slow_things_serially(JOB_COUNTER.value)
     # do_slow_things_multithread()
     do_slow_things_multiprocess_multithread()
 
-    print(logging_utilities.get_final_summary(start_time, total_jobs))
+    print(f"\n\n{logging_utilities.get_final_summary(START_TIME, TOTAL_JOBS)}")
