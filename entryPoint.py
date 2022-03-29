@@ -7,6 +7,7 @@ from multiprocessing import Value
 from time import time
 from typing import Optional
 
+import colorama
 from loguru import logger
 
 import logging_utilities
@@ -114,6 +115,8 @@ if __name__ == '__main__':
     TOTAL_JOBS = 500
 
     logging_utilities.configure_logger()
+
+    colorama.init()
 
     # do_slow_things_serially(JOB_COUNTER.value)
     # do_slow_things_multithread()

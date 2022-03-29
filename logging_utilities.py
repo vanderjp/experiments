@@ -3,9 +3,14 @@ from datetime import datetime
 from pathlib import Path
 from time import time
 
+import colorama
 from loguru import logger
 
 import file_system_utilities
+
+
+def get_magenta_string(a_string: str) -> str:
+    return f"{colorama.Fore.MAGENTA}{a_string}{colorama.Fore.RESET}"
 
 
 def configure_logger(is_delete_existing: bool = True):
@@ -35,20 +40,23 @@ def get_final_summary(start_time: float, total_jobs: int) -> str:
     print_eta(total_jobs, start_time, total_jobs)
     job_duration: float = time() - start_time
 
-    duration_str = f"Batch processing completed in {format_duration_string(job_duration)}"
+    duration_str = f"Batch processing completed in " \
+                   f"{get_magenta_string(format_duration_string(job_duration))}"
     logger.success(duration_str)
     return duration_str
 
 
 def print_eta(job_count: int, start_time: time, total_jobs: int):
     duration: float = time() - start_time
-
+    duration_str: str = format_duration_string(duration).rjust(8)
     eta: float = (duration / job_count) * (total_jobs - job_count)
+    eta_str: str = format_duration_string(eta).rjust(10)
+    percent_completion: str = f"{round((job_count / total_jobs) * 100)}%".rjust(4)
+    spacer: str = " -- "
+    tasks_completed: str = f"{str(job_count).rjust(6)} / {str(total_jobs).rjust(6)}"
 
-    format_duration_string(eta)
-
-    sys.stdout.write(f"\rTasks Completed: {job_count}/{total_jobs} -- "
-                     f"Percent Completion: {round((job_count / total_jobs) * 100)}% -- "
-                     f"Duration: {format_duration_string(duration)} -- "
-                     f"Completion ETA: {format_duration_string(eta)}")
+    sys.stdout.write(f"\rTasks Completed: {get_magenta_string(tasks_completed)}{spacer}"
+                     f"Percent Completion: {get_magenta_string(percent_completion)}{spacer}"
+                     f"Duration: {get_magenta_string(duration_str)}{spacer}"
+                     f"Completion ETA: {get_magenta_string(eta_str)}")
     sys.stdout.flush()
